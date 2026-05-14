@@ -15,6 +15,14 @@ app.prepare().then(() => {
 
   let players = [];
 
+  const COLORS = {
+    red: "#ff3b3b",
+    blue: "#3b82f6",
+    green: "#22c55e",
+    yellow: "#eab308",
+    purple: "#a855f7",
+  };
+
   function createBot(name) {
     return {
       name,
@@ -24,6 +32,8 @@ app.prepare().then(() => {
       level: Math.floor(Math.random() * 5) + 1,
       action: "attack",
       lastGift: "BOT",
+      visual: "red",
+      color: "#ff3b3b",
       x: Math.random() * 70 + 15,
       y: Math.random() * 25 + 45,
       target: null,
@@ -44,23 +54,25 @@ app.prepare().then(() => {
     console.log("Cliente conectado");
     socket.emit("playersUpdate", players);
 
-    socket.on("testGift", (giftData) => {
-      let player = players.find((p) => p.name === giftData.user);
+    socket.on("testConfiguredGift", (data) => {
+      const gift = data.gift;
+      const user = data.user || "João";
 
-      if (player) {
-        player.points += giftData.power;
-        player.xp += giftData.power;
-        player.hp = Math.min(100, player.hp + 25);
-        player.energy = Math.min(100, player.energy + 30);
-      } else {
+      if (!gift) return;
+
+      let player = players.find((p) => p.name === user);
+
+      if (!player) {
         player = {
-          name: giftData.user,
-          points: giftData.power,
-          xp: giftData.power,
+          name: user,
+          points: 0,
+          xp: 0,
           hp: 100,
           level: 1,
-          action: giftData.action,
-          lastGift: giftData.gift,
+          action: gift.action,
+          lastGift: gift.name,
+          visual: gift.visual,
+          color: COLORS[gift.visual] || "#ff3b3b",
           x: Math.random() * 70 + 15,
           y: Math.random() * 25 + 45,
           target: null,
@@ -74,26 +86,103 @@ app.prepare().then(() => {
         players.push(player);
       }
 
+      player.lastGift = gift.name;
+      player.action = gift.action;
+      player.visual = gift.visual;
+      player.color = COLORS[gift.visual] || player.color;
+
+      player.points += gift.power || 0;
+      player.xp += gift.xp || 0;
+
+      if (gift.action === "heal") {
+        player.hp = Math.min(100, player.hp + (gift.hp || 20));
+      }
+
+      if (gift.action === "energy") {
+        player.energy = Math.min(100, player.energy + (gift.energy || 25));
+      }
+
+      if (gift.action === "evolution") {
+        player.xp += 150;
+      }
+
+      if (gift.action === "ultimate") {
+        player.xp += 250;
+        player.points += 200;
+      }
+
+      if (gift.action === "shield") {
+        player.hp = Math.min(100, player.hp + 40);
+      }
+
       if (player.xp >= 1000) player.level = 5;
       else if (player.xp >= 600) player.level = 4;
       else if (player.xp >= 300) player.level = 3;
       else if (player.xp >= 100) player.level = 2;
       else player.level = 1;
 
-      player.action = giftData.action;
-      player.lastGift = giftData.gift;
-
       io.emit("arenaMessage", {
-        text: `✨ ${giftData.user} fortaleceu seu monstro!`,
+        text: `🎁 ${user} usou ${gift.name}: ${gift.action}!`,
       });
 
+      if (gift.action === "attack" || gift.action === "ultimate") {
+        const target = getNearestEnemy(player);
+
+        if (target) {
+          const damage = gift.action === "ultimate" ? gift.power * 3 : gift.power;
+
+          target.hp -= damage;
+
+          io.emit("arenaMessage", {
+            text: `⚔️ ${player.name} lançou ${gift.name} em ${target.name}!`,
+            attacker: player.name,
+            target: target.name,
+          });
+
+          if (target.hp <= 0) {
+            player.points += 100;
+
+            io.emit("arenaMessage", {
+              text: `👑 ${player.name} derrotou ${target.name}!`,
+              attacker: player.name,
+              target: target.name,
+            });
+
+            if (target.isBot) {
+              target.hp = 100;
+              target.energy = 100;
+              target.x = Math.random() * 70 + 15;
+              target.y = Math.random() * 25 + 45;
+              target.moveAngle = Math.random() * Math.PI * 2;
+            } else {
+              players = players.filter((p) => p.name !== target.name);
+            }
+          }
+        }
+      }
+
+      players.sort((a, b) => b.points - a.points);
       io.emit("playersUpdate", players);
+    });
+
+    socket.on("testGift", (giftData) => {
+      socket.emit("testConfiguredGift", {
+        user: giftData.user || "João",
+        gift: {
+          name: giftData.gift || "Teste",
+          action: giftData.action || "attack",
+          power: giftData.power || 10,
+          xp: giftData.power || 10,
+          hp: 10,
+          energy: 10,
+          visual: "red",
+        },
+      });
     });
   });
 
   function getNearestEnemy(player) {
     const enemies = players.filter((p) => p.name !== player.name);
-
     if (enemies.length === 0) return null;
 
     let target = enemies[0];
