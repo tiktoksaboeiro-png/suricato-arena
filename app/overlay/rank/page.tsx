@@ -1,108 +1,3 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
-
-type Player = {
-  id: string;
-  name: string;
-  photo?: string;
-  points: number;
-  level?: number;
-};
-
-const socket = io(
-  process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001"
-);
-
-export default function RankOverlay() {
-  const [topLimit, setTopLimit] = useState(5);
-  const [players, setPlayers] = useState<Player[]>([
-    { id: "1", name: "ShadowHunter", points: 15420, level: 42, photo: "/default-avatar.png" },
-    { id: "2", name: "MegaLion", points: 12890, level: 35, photo: "/default-avatar.png" },
-    { id: "3", name: "DarkSniper", points: 11200, level: 29, photo: "/default-avatar.png" },
-    { id: "4", name: "SuricatoX", points: 8750, level: 21, photo: "/default-avatar.png" },
-    { id: "5", name: "TikWarrior", points: 6210, level: 17, photo: "/default-avatar.png" },
-  ]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const top = Number(params.get("top") || 5);
-    setTopLimit(Math.min(Math.max(top, 1), 10));
-  }, []);
-
-  useEffect(() => {
-    socket.on("ranking:update", (data: Player[]) => setPlayers(data));
-
-    socket.on("arena:update", (data: any) => {
-      if (data?.players) setPlayers(data.players);
-    });
-
-    return () => {
-      socket.off("ranking:update");
-      socket.off("arena:update");
-    };
-  }, []);
-
-  const topPlayers = [...players]
-    .sort((a, b) => (b.points || 0) - (a.points || 0))
-    .slice(0, topLimit);
-
-  return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <div style={styles.crown}>👑</div>
-          <h1 style={styles.title}>RANK DA ARENA</h1>
-          <p style={styles.subtitle}>TOP {topLimit} GUERREIROS</p>
-        </div>
-
-        <div style={styles.list}>
-          {topPlayers.map((player, index) => (
-            <div
-              key={player.id}
-              style={{
-                ...styles.playerCard,
-                ...(index === 0 ? styles.first : {}),
-                ...(index === 1 ? styles.second : {}),
-                ...(index === 2 ? styles.third : {}),
-              }}
-            >
-              <div
-                style={{
-                  ...styles.position,
-                  ...(index === 0 ? styles.gold : {}),
-                  ...(index === 1 ? styles.silver : {}),
-                  ...(index === 2 ? styles.bronze : {}),
-                }}
-              >
-                {index + 1}
-              </div>
-
-              <img
-                src={player.photo || "/default-avatar.png"}
-                alt={player.name}
-                style={styles.avatar}
-              />
-
-              <div style={styles.info}>
-                <div style={styles.name}>{player.name}</div>
-                <div style={styles.points}>
-                  🏆 {(player.points || 0).toLocaleString()} pts
-                </div>
-              </div>
-
-              <div style={styles.level}>LV {player.level || 1}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={styles.footer}>ATAQUE • EVOLUA • DOMINE</div>
-      </div>
-    </main>
-  );
-}
-
 const styles: Record<string, React.CSSProperties> = {
   page: {
     width: "100vw",
@@ -120,13 +15,9 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     width: "100%",
     maxWidth: "460px",
-    background:
-      "linear-gradient(180deg, rgba(8,10,24,0.96), rgba(3,4,10,0.92))",
+    background: "transparent",
     borderRadius: "28px",
-    border: "2px solid rgba(255,215,0,0.9)",
     padding: "16px",
-    boxShadow:
-      "0 0 22px rgba(255,215,0,0.75), inset 0 0 30px rgba(255,215,0,0.12)",
     backdropFilter: "blur(8px)",
   },
 
@@ -138,6 +29,7 @@ const styles: Record<string, React.CSSProperties> = {
       "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(0,234,255,0.12), rgba(255,0,120,0.14))",
     border: "1px solid rgba(255,255,255,0.14)",
     textAlign: "center",
+    boxShadow: "0 0 20px rgba(255,215,0,0.45)",
   },
 
   crown: {
@@ -174,11 +66,13 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: "center",
     gap: "11px",
     background:
-      "linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.035))",
+      "linear-gradient(90deg, rgba(8,10,24,0.82), rgba(8,10,24,0.68))",
     borderRadius: "18px",
     padding: "10px",
     border: "1px solid rgba(255,255,255,0.12)",
-    boxShadow: "inset 0 0 12px rgba(255,255,255,0.05)",
+    boxShadow:
+      "0 0 14px rgba(0,234,255,0.18), inset 0 0 12px rgba(255,255,255,0.05)",
+    backdropFilter: "blur(8px)",
   },
 
   first: {
@@ -281,7 +175,8 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: "1.5px",
     padding: "8px",
     borderRadius: "14px",
-    background: "rgba(255,215,0,0.08)",
+    background: "rgba(8,10,24,0.65)",
     border: "1px solid rgba(255,215,0,0.25)",
+    backdropFilter: "blur(8px)",
   },
 };
