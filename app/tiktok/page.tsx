@@ -3,28 +3,30 @@
 import Link from "next/link";
 import { useState } from "react";
 
+const BACKEND_URL = "https://consonant-iodine-caboose.ngrok-free.dev";
+
 export default function TikTokPage() {
   const [username, setUsername] = useState("");
   const [status, setStatus] = useState("Desconectado");
   const [loading, setLoading] = useState(false);
 
   async function connectTikTok() {
-    if (!username) {
+    if (!username.trim()) {
       alert("Digite o @ da live.");
       return;
     }
 
+    const cleanUser = username.replace("@", "").trim();
+
     try {
       setLoading(true);
-
-      const cleanUser = username.replace("@", "").trim();
-
       setStatus(`Conectando em @${cleanUser}...`);
 
-      const response = await fetch("http://localhost:3001/connect", {
+      const response = await fetch(`${BACKEND_URL}/connect`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
           username: cleanUser,
@@ -36,11 +38,10 @@ export default function TikTokPage() {
       if (data.success) {
         setStatus(`LIVE CONECTADA: @${cleanUser}`);
       } else {
-        setStatus("Erro ao conectar.");
+        setStatus("Erro ao conectar na live.");
       }
-    } catch (err) {
-      console.log(err);
-
+    } catch (error) {
+      console.log(error);
       setStatus("Erro ao conectar na live.");
     } finally {
       setLoading(false);
@@ -62,7 +63,7 @@ export default function TikTokPage() {
 
         <Link
           href="/dashboard"
-          className="bg-zinc-800 hover:bg-zinc-700 px-5 py-3 rounded-2xl font-bold transition-all"
+          className="bg-zinc-800 hover:bg-zinc-700 px-5 py-3 rounded-2xl font-bold"
         >
           Voltar
         </Link>
@@ -75,7 +76,7 @@ export default function TikTokPage() {
 
         <input
           className="mt-4 p-5 rounded-2xl bg-zinc-800 border border-zinc-700 outline-none w-full text-xl focus:border-yellow-400 transition-all"
-          placeholder="Ex: @flowsaboeiro"
+          placeholder="Ex: @suricato_ofc"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -87,7 +88,7 @@ export default function TikTokPage() {
         <button
           onClick={connectTikTok}
           disabled={loading}
-          className="mt-8 bg-gradient-to-r from-pink-600 to-yellow-500 hover:scale-[1.02] transition-all p-5 rounded-2xl font-black text-2xl w-full shadow-[0_0_25px_rgba(255,0,128,0.45)]"
+          className="mt-8 bg-gradient-to-r from-pink-600 to-yellow-500 hover:scale-[1.02] transition-all p-5 rounded-2xl font-black text-2xl w-full shadow-[0_0_25px_rgba(255,0,128,0.45)] disabled:opacity-60"
         >
           {loading ? "CONECTANDO..." : "CONECTAR NA LIVE"}
         </button>
@@ -97,9 +98,7 @@ export default function TikTokPage() {
             Status
           </h2>
 
-          <p className="text-zinc-200 text-lg">
-            {status}
-          </p>
+          <p className="text-zinc-200 text-lg">{status}</p>
         </div>
       </section>
     </main>
