@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
-import { useSearchParams } from "next/navigation";
 
 type Player = {
   id: string;
@@ -17,60 +16,26 @@ const socket = io(
 );
 
 export default function RankOverlay() {
-  const searchParams = useSearchParams();
-
-  const topLimit = Math.min(
-    Math.max(Number(searchParams.get("top") || 5), 1),
-    10
-  );
-
+  const [topLimit, setTopLimit] = useState(5);
   const [players, setPlayers] = useState<Player[]>([
-    {
-      id: "1",
-      name: "ShadowHunter",
-      points: 15420,
-      level: 42,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "2",
-      name: "MegaLion",
-      points: 12890,
-      level: 35,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "3",
-      name: "DarkSniper",
-      points: 11200,
-      level: 29,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "4",
-      name: "SuricatoX",
-      points: 8750,
-      level: 21,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "5",
-      name: "TikWarrior",
-      points: 6210,
-      level: 17,
-      photo: "/default-avatar.png",
-    },
+    { id: "1", name: "ShadowHunter", points: 15420, level: 42, photo: "/default-avatar.png" },
+    { id: "2", name: "MegaLion", points: 12890, level: 35, photo: "/default-avatar.png" },
+    { id: "3", name: "DarkSniper", points: 11200, level: 29, photo: "/default-avatar.png" },
+    { id: "4", name: "SuricatoX", points: 8750, level: 21, photo: "/default-avatar.png" },
+    { id: "5", name: "TikWarrior", points: 6210, level: 17, photo: "/default-avatar.png" },
   ]);
 
   useEffect(() => {
-    socket.on("ranking:update", (data: Player[]) => {
-      setPlayers(data);
-    });
+    const params = new URLSearchParams(window.location.search);
+    const top = Number(params.get("top") || 5);
+    setTopLimit(Math.min(Math.max(top, 1), 10));
+  }, []);
+
+  useEffect(() => {
+    socket.on("ranking:update", (data: Player[]) => setPlayers(data));
 
     socket.on("arena:update", (data: any) => {
-      if (data?.players) {
-        setPlayers(data.players);
-      }
+      if (data?.players) setPlayers(data.players);
     });
 
     return () => {
@@ -88,82 +53,51 @@ export default function RankOverlay() {
       <div style={styles.container}>
         <div style={styles.header}>
           <div style={styles.crown}>👑</div>
-
           <h1 style={styles.title}>RANK DA ARENA</h1>
-
-          <p style={styles.subtitle}>
-            TOP {topLimit} GUERREIROS
-          </p>
+          <p style={styles.subtitle}>TOP {topLimit} GUERREIROS</p>
         </div>
 
         <div style={styles.list}>
-          {topPlayers.length > 0 ? (
-            topPlayers.map((player, index) => (
+          {topPlayers.map((player, index) => (
+            <div
+              key={player.id}
+              style={{
+                ...styles.playerCard,
+                ...(index === 0 ? styles.first : {}),
+                ...(index === 1 ? styles.second : {}),
+                ...(index === 2 ? styles.third : {}),
+              }}
+            >
               <div
-                key={player.id}
                 style={{
-                  ...styles.playerCard,
-                  ...(index === 0
-                    ? styles.first
-                    : index === 1
-                    ? styles.second
-                    : index === 2
-                    ? styles.third
-                    : {}),
+                  ...styles.position,
+                  ...(index === 0 ? styles.gold : {}),
+                  ...(index === 1 ? styles.silver : {}),
+                  ...(index === 2 ? styles.bronze : {}),
                 }}
               >
-                <div
-                  style={{
-                    ...styles.position,
-                    ...(index === 0
-                      ? styles.gold
-                      : index === 1
-                      ? styles.silver
-                      : index === 2
-                      ? styles.bronze
-                      : {}),
-                  }}
-                >
-                  {index + 1}
-                </div>
+                {index + 1}
+              </div>
 
-                <img
-                  src={player.photo || "/default-avatar.png"}
-                  alt={player.name}
-                  style={styles.avatar}
-                />
+              <img
+                src={player.photo || "/default-avatar.png"}
+                alt={player.name}
+                style={styles.avatar}
+              />
 
-                <div style={styles.info}>
-                  <div style={styles.name}>
-                    {player.name}
-                  </div>
-
-                  <div style={styles.points}>
-                    🏆 {(player.points || 0).toLocaleString()} pts
-                  </div>
-                </div>
-
-                <div style={styles.level}>
-                  LV {player.level || 1}
+              <div style={styles.info}>
+                <div style={styles.name}>{player.name}</div>
+                <div style={styles.points}>
+                  🏆 {(player.points || 0).toLocaleString()} pts
                 </div>
               </div>
-            ))
-          ) : (
-            <div style={styles.empty}>
-              <div style={styles.emptyIcon}>⚔️</div>
 
-              <div>Aguardando guerreiros...</div>
-
-              <span>
-                Envie presentes para entrar no rank
-              </span>
+              <div style={styles.level}>LV {player.level || 1}</div>
             </div>
-          )}
+          ))}
         </div>
 
-        <div style={styles.footer}>
-          ATAQUE • EVOLUA • DOMINE
-        </div>
+        <div style={styles.footer}>ATAQUE • EVOLUA • DOMINE</div>
       </div>
     </main>
   );
@@ -197,7 +131,6 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   header: {
-    position: "relative",
     marginBottom: "14px",
     padding: "12px 8px 16px",
     borderRadius: "22px",
@@ -337,20 +270,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     padding: "6px 8px",
     flexShrink: 0,
-  },
-
-  empty: {
-    color: "#ffffff",
-    textAlign: "center",
-    padding: "28px 12px",
-    fontWeight: 900,
-    fontSize: "17px",
-  },
-
-  emptyIcon: {
-    fontSize: "38px",
-    marginBottom: "8px",
-    filter: "drop-shadow(0 0 10px rgba(255,215,0,0.9))",
   },
 
   footer: {
