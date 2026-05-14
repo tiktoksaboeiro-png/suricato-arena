@@ -5,16 +5,13 @@ import { io } from "socket.io-client";
 
 const socket = io("http://localhost:3000");
 
-const COLORS = [
-  "#ff3b3b",
-  "#3b82f6",
-  "#22c55e",
-  "#eab308",
-  "#a855f7",
-  "#ec4899",
-  "#06b6d4",
-  "#ff7b00",
-];
+const AURA_COLORS: Record<string, string> = {
+  white: "#ffffff",
+  green: "#22c55e",
+  blue: "#3b82f6",
+  purple: "#a855f7",
+  gold: "#facc15",
+};
 
 export default function OverlayPage() {
   const [players, setPlayers] = useState<any[]>([]);
@@ -30,20 +27,7 @@ export default function OverlayPage() {
 
   useEffect(() => {
     socket.on("playersUpdate", (updatedPlayers) => {
-      setPlayers((prev) => {
-        return updatedPlayers.map((player: any, index: number) => {
-          const oldPlayer = prev.find(
-            (p) => p.name === player.name
-          );
-
-          return {
-            ...player,
-            color:
-              oldPlayer?.color ??
-              COLORS[index % COLORS.length],
-          };
-        });
-      });
+      setPlayers(updatedPlayers);
     });
 
     socket.on("arenaMessage", (data) => {
@@ -59,31 +43,27 @@ export default function OverlayPage() {
         );
 
         if (attacker && target) {
-          const projectileId = Date.now() + Math.random();
+          const id = Date.now() + Math.random();
 
           setProjectiles((prev) => [
             ...prev,
             {
-              id: projectileId,
+              id,
               fromX: attacker.x,
               fromY: attacker.y,
               toX: target.x,
               toY: target.y,
-              color: attacker.color,
+              color: attacker.color || "#ef4444",
             },
           ]);
 
           setTimeout(() => {
             setHitPlayer(target.name);
 
-            setTimeout(() => {
-              setHitPlayer("");
-            }, 250);
+            setTimeout(() => setHitPlayer(""), 250);
 
-            setProjectiles((prev) =>
-              prev.filter((p) => p.id !== projectileId)
-            );
-          }, 900);
+            setProjectiles((prev) => prev.filter((p) => p.id !== id));
+          }, 700);
         }
       }
 
@@ -98,7 +78,13 @@ export default function OverlayPage() {
     };
   }, []);
 
-  function monsterIcon(level: number) {
+  function hpColor(hp: number) {
+    if (hp > 60) return "#22c55e";
+    if (hp > 30) return "#eab308";
+    return "#ef4444";
+  }
+
+  function iconByLevel(level: number) {
     if (level >= 5) return "👑";
     if (level === 4) return "🐉";
     if (level === 3) return "🐲";
@@ -106,128 +92,98 @@ export default function OverlayPage() {
     return "👾";
   }
 
-  function monsterSize(level: number) {
-    if (level >= 5) return 118;
-    if (level === 4) return 108;
-    if (level === 3) return 98;
-    if (level === 2) return 88;
-    return 76;
+  function arenaX(x: number) {
+    return Math.max(6, Math.min(94, x));
   }
 
-  function hpColor(hp: number) {
-    if (hp > 60) return "#22c55e";
-    if (hp > 30) return "#eab308";
-    return "#ef4444";
+  function arenaY(y: number) {
+    const normalized = ((y - 40) / 42) * 100;
+    return Math.max(8, Math.min(82, normalized));
   }
 
   return (
-    <main className="w-screen h-screen overflow-hidden relative text-white bg-transparent">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(40,40,80,0.35),rgba(0,0,0,0.92)_62%)]" />
-
-      <div className="absolute left-6 top-6 w-[360px] z-30 rounded-3xl border border-white/15 bg-black/75 backdrop-blur-md shadow-2xl overflow-hidden">
-        <div className="px-6 py-5 border-b border-white/10">
-          <h1 className="text-3xl font-black tracking-wide">
-            🏆 TOP JOGADORES
+    <main className="w-screen h-screen bg-black text-white overflow-hidden relative">
+      <section className="absolute top-0 left-0 right-0 h-[55%] bg-gradient-to-b from-zinc-950 to-black flex items-center justify-center border-b border-white/10">
+        <div className="text-center opacity-70">
+          <h1 className="text-5xl font-black tracking-wide">
+            SURICATO ARENA
           </h1>
+          <p className="text-zinc-400 mt-3 text-xl">
+            Espaço da câmera / live
+          </p>
         </div>
+      </section>
 
-        <div className="p-4 space-y-3">
-          {players.slice(0, 5).map((player, index) => (
-            <div
-              key={player.name}
-              className={`rounded-2xl p-4 border ${
-                index === 0
-                  ? "bg-yellow-400 text-black border-yellow-200 shadow-[0_0_24px_rgba(250,204,21,0.45)]"
-                  : "bg-zinc-950/90 border-white/10"
-              }`}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+      <section className="absolute left-0 right-0 bottom-0 h-[45%] bg-[radial-gradient(circle_at_center,rgba(100,0,150,0.28),rgba(0,0,0,0.95)_65%)] border-t-4 border-purple-600 overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_55%,rgba(0,180,255,0.16),transparent_35%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_50%,rgba(255,0,0,0.16),transparent_35%)]" />
+
+        <div className="absolute top-4 left-4 z-40 w-[280px] rounded-2xl bg-black/75 border border-white/10 backdrop-blur-md p-4">
+          <h2 className="text-2xl font-black mb-3">🏆 TOP</h2>
+
+          <div className="space-y-2">
+            {players.slice(0, 3).map((player, index) => (
+              <div
+                key={player.name}
+                className={`rounded-xl px-3 py-2 font-bold ${
+                  index === 0
+                    ? "bg-yellow-400 text-black"
+                    : "bg-zinc-900 text-white"
+                }`}
+              >
+                <div className="flex justify-between">
+                  <span>
+                    {index + 1}. {player.name}
+                  </span>
+                  <span>LV {player.level}</span>
+                </div>
+
+                <div className="text-sm opacity-80">
+                  {player.points} pts
+                </div>
+
+                <div className="mt-1 h-2 bg-black/40 rounded-full overflow-hidden">
                   <div
-                    className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xl"
+                    className="h-full rounded-full"
                     style={{
-                      backgroundColor: player.color,
-                      boxShadow: `0 0 16px ${player.color}`,
+                      width: `${Math.max(0, Math.min(100, player.hp))}%`,
+                      backgroundColor: hpColor(player.hp),
                     }}
-                  >
-                    {monsterIcon(player.level)}
-                  </div>
-
-                  <div>
-                    <p className="font-black text-lg leading-tight">
-                      {index + 1}. {player.name}
-                    </p>
-
-                    <p
-                      className={
-                        index === 0
-                          ? "font-black"
-                          : "text-yellow-300 font-black"
-                      }
-                    >
-                      {player.points} pts
-                    </p>
-                  </div>
-                </div>
-
-                <div className="font-black text-sm">
-                  LV {player.level}
+                  />
                 </div>
               </div>
-
-              <div className="mt-3 h-3 rounded-full bg-black/50 overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${Math.max(
-                      0,
-                      Math.min(100, player.hp)
-                    )}%`,
-                    backgroundColor: hpColor(player.hp),
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-
-      <div className="absolute left-[410px] right-8 top-6 bottom-28 rounded-[32px] border border-white/10 bg-black/25 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(80,0,120,0.18),transparent_55%)]" />
 
         {projectiles.map((projectile) => {
-          const dx = projectile.toX - projectile.fromX;
-          const dy = projectile.toY - projectile.fromY;
+          const fromX = arenaX(projectile.fromX);
+          const fromY = arenaY(projectile.fromY);
+          const toX = arenaX(projectile.toX);
+          const toY = arenaY(projectile.toY);
 
-          const angle =
-            Math.atan2(dy, dx) * (180 / Math.PI);
-
+          const dx = toX - fromX;
+          const dy = toY - fromY;
+          const angle = Math.atan2(dy, dx) * (180 / Math.PI);
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           return (
             <div
               key={projectile.id}
-              className="absolute z-40 pointer-events-none origin-left"
+              className="absolute z-50 origin-left pointer-events-none"
               style={{
-                left: `${projectile.fromX}%`,
-                top: `${projectile.fromY}%`,
+                left: `${fromX}%`,
+                top: `${fromY}%`,
                 width: `${distance}%`,
-                height: 14,
+                height: 12,
                 transform: `rotate(${angle}deg)`,
               }}
             >
               <div
                 className="absolute left-0 top-1/2 -translate-y-1/2 h-[5px] w-full rounded-full"
                 style={{
-                  background: `linear-gradient(to right,
-                    ${projectile.color},
-                    ${projectile.color},
-                    transparent)`,
-                  boxShadow: `
-                    0 0 10px ${projectile.color},
-                    0 0 22px ${projectile.color},
-                    0 0 42px ${projectile.color}
-                  `,
+                  background: `linear-gradient(to right, ${projectile.color}, ${projectile.color}, transparent)`,
+                  boxShadow: `0 0 16px ${projectile.color}, 0 0 40px ${projectile.color}`,
                 }}
               />
 
@@ -237,11 +193,7 @@ export default function OverlayPage() {
                   width: 24,
                   height: 24,
                   backgroundColor: projectile.color,
-                  boxShadow: `
-                    0 0 12px ${projectile.color},
-                    0 0 30px ${projectile.color},
-                    0 0 60px ${projectile.color}
-                  `,
+                  boxShadow: `0 0 20px ${projectile.color}, 0 0 60px ${projectile.color}`,
                 }}
               />
             </div>
@@ -249,79 +201,68 @@ export default function OverlayPage() {
         })}
 
         {players.map((player) => {
-          const size = monsterSize(player.level);
+          const x = arenaX(player.x);
+          const y = arenaY(player.y);
+          const aura = AURA_COLORS[player.aura] || player.color || "#ffffff";
+          const size =
+            player.level >= 5
+              ? 88
+              : player.level === 4
+              ? 78
+              : player.level === 3
+              ? 68
+              : player.level === 2
+              ? 58
+              : 50;
+
           const isHit = hitPlayer === player.name;
 
           return (
             <div
               key={player.name}
-              className="absolute z-20 transition-all duration-300 ease-linear"
+              className="absolute z-30 transition-all duration-300 ease-linear"
               style={{
-                left: `${player.x}%`,
-                top: `${player.y}%`,
+                left: `${x}%`,
+                top: `${y}%`,
                 transform: "translate(-50%, -50%)",
               }}
             >
               {isHit && (
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-red-500 text-5xl font-black animate-bounce z-50 drop-shadow-[0_0_12px_red]">
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-red-500 text-4xl font-black animate-bounce">
                   HIT!
                 </div>
               )}
 
               <div className="flex flex-col items-center">
                 <div
-                  className={`rounded-full border-[4px] border-white flex items-center justify-center transition-all duration-300 ${
+                  className={`rounded-full border-4 border-white flex items-center justify-center ${
                     player.attacking ? "scale-110" : ""
                   }`}
                   style={{
                     width: size,
                     height: size,
-                    backgroundColor: player.color,
-                    boxShadow: `
-                      0 0 18px ${player.color},
-                      0 0 42px ${player.color},
-                      0 0 80px ${player.color}
-                    `,
-                    filter: isHit
-                      ? "brightness(2)"
-                      : "none",
+                    backgroundColor: player.color || "#ef4444",
+                    boxShadow: `0 0 18px ${aura}, 0 0 45px ${aura}`,
+                    filter: isHit ? "brightness(2)" : "none",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize:
-                        player.level >= 5
-                          ? 54
-                          : player.level === 4
-                          ? 50
-                          : player.level === 3
-                          ? 44
-                          : player.level === 2
-                          ? 38
-                          : 32,
-                    }}
-                  >
-                    {monsterIcon(player.level)}
-                  </span>
+                  <span className="text-3xl">{iconByLevel(player.level)}</span>
                 </div>
 
-                <div className="mt-2 px-4 py-2 rounded-2xl bg-black/75 border border-white/10 min-w-[130px] text-center shadow-xl">
-                  <p className="font-black text-lg leading-tight">
+                <div className="mt-1 bg-black/80 border border-white/10 rounded-xl px-3 py-1 min-w-[90px] text-center">
+                  <p className="font-black text-sm leading-tight">
                     {player.name}
                   </p>
 
-                  <p className="text-yellow-300 font-black">
+                  <p className="text-yellow-300 text-xs font-bold">
                     {player.points} pts
                   </p>
 
-                  <div className="mt-2 h-3 rounded-full bg-zinc-900 overflow-hidden border border-white/10">
+                  <div className="mt-1 h-2 bg-zinc-900 rounded-full overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-300"
+                      className="h-full rounded-full"
                       style={{
-                        width: `${Math.max(
-                          0,
-                          Math.min(100, player.hp)
-                        )}%`,
+                        width: `${Math.max(0, Math.min(100, player.hp))}%`,
                         backgroundColor: hpColor(player.hp),
                       }}
                     />
@@ -331,11 +272,11 @@ export default function OverlayPage() {
             </div>
           );
         })}
-      </div>
 
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 rounded-3xl border border-red-500/40 bg-black/80 backdrop-blur-md px-12 py-5 text-3xl font-black shadow-[0_0_30px_rgba(239,68,68,0.25)]">
-        {message}
-      </div>
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-black/80 border border-purple-500/40 rounded-2xl px-8 py-3 text-2xl font-black shadow-[0_0_25px_rgba(168,85,247,0.35)]">
+          {message}
+        </div>
+      </section>
     </main>
   );
 }
