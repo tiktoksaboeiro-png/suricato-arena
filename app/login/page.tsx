@@ -3,65 +3,141 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZNTh7RPiIOUqnqXPeCshW6SrZtHsE40MhFO154ADc-00LTmXynyung336ahyyXhZH9w/exec";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  function login() {
-    if (!email || !password) {
-      alert("Preencha email e senha.");
+  const [key, setKey] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState("");
+
+  async function entrar() {
+    setErro("");
+
+    if (!key.trim()) {
+      setErro("Digite sua key de acesso.");
       return;
     }
 
-    localStorage.setItem("suricato_logged", "true");
-    localStorage.setItem("suricato_email", email);
+    setLoading(true);
 
-    router.push("/dashboard");
+    try {
+      const url = `${APPS_SCRIPT_URL}?key=${encodeURIComponent(
+        key.trim()
+      )}&pc=SITE`;
+
+      const response = await fetch(url);
+      const result = await response.text();
+
+      if (
+        result.includes("ATIVADA") ||
+        result.includes("LIBERADA") ||
+        result.includes("BLOQUEADA")
+      ) {
+        localStorage.setItem("suricato_key", key.trim());
+        router.push("/dashboard");
+        return;
+      }
+
+      setErro("Key inválida.");
+    } catch {
+      setErro("Erro ao validar key.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <main
-      className="min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-6"
-      style={{
-        backgroundImage: "url('/login-bg.png')",
-      }}
-    >
-      <div className="absolute inset-0 bg-black/30" />
+    <main style={styles.page}>
+      <div style={styles.card}>
+        <div style={styles.logo}>🦝</div>
 
-      <div className="relative z-10 w-full max-w-md bg-black/65 border border-purple-500/60 rounded-3xl p-8 shadow-[0_0_40px_rgba(168,85,247,0.5)] backdrop-blur-md">
-        <h1 className="text-4xl font-black text-center mb-2">
-          SURICATO ARENA
-        </h1>
+        <h1 style={styles.title}>SURICATO ARENA</h1>
+        <p style={styles.subtitle}>Digite sua key para entrar</p>
 
-        <p className="text-zinc-300 text-center mb-8">
-          Entre para configurar sua arena
-        </p>
+        <input
+          style={styles.input}
+          value={key}
+          onChange={(e) => setKey(e.target.value)}
+          placeholder="Ex: SURI-1234"
+        />
 
-        <div className="flex flex-col gap-4">
-          <input
-            className="p-4 rounded-xl bg-black/70 border border-purple-500/40 outline-none"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+        {erro && <div style={styles.erro}>{erro}</div>}
 
-          <input
-            className="p-4 rounded-xl bg-black/70 border border-purple-500/40 outline-none"
-            placeholder="Senha"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button
-            onClick={login}
-            className="p-4 rounded-xl bg-purple-600 hover:bg-purple-500 font-black text-xl"
-          >
-            ENTRAR
-          </button>
-        </div>
+        <button style={styles.button} onClick={entrar} disabled={loading}>
+          {loading ? "VALIDANDO..." : "ENTRAR NA ARENA"}
+        </button>
       </div>
     </main>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    width: "100vw",
+    height: "100vh",
+    background:
+      "radial-gradient(circle at top, #1b2350 0%, #050712 55%, #000 100%)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "Arial, sans-serif",
+  },
+  card: {
+    width: "90%",
+    maxWidth: "430px",
+    background: "rgba(8,10,24,0.94)",
+    border: "2px solid rgba(255,215,0,0.8)",
+    borderRadius: "28px",
+    padding: "32px",
+    textAlign: "center",
+    boxShadow: "0 0 35px rgba(255,215,0,0.45)",
+  },
+  logo: {
+    fontSize: "54px",
+    marginBottom: "8px",
+  },
+  title: {
+    color: "#ffd700",
+    fontSize: "34px",
+    fontWeight: 900,
+    margin: 0,
+  },
+  subtitle: {
+    color: "#ffffff",
+    opacity: 0.85,
+    marginBottom: "24px",
+  },
+  input: {
+    width: "100%",
+    height: "52px",
+    borderRadius: "16px",
+    border: "2px solid rgba(255,215,0,0.6)",
+    background: "#050712",
+    color: "#ffffff",
+    fontSize: "18px",
+    fontWeight: 800,
+    textAlign: "center",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  erro: {
+    marginTop: "14px",
+    color: "#ff4d4d",
+    fontWeight: 800,
+  },
+  button: {
+    width: "100%",
+    height: "54px",
+    marginTop: "22px",
+    borderRadius: "18px",
+    border: "none",
+    background: "linear-gradient(90deg, #ffd700, #ff9d00)",
+    color: "#111",
+    fontWeight: 900,
+    fontSize: "16px",
+    cursor: "pointer",
+    boxShadow: "0 0 18px rgba(255,215,0,0.6)",
+  },
+};
