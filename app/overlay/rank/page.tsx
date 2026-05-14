@@ -17,41 +17,11 @@ export default function RankOverlay() {
   const [topLimit, setTopLimit] = useState(5);
 
   const [players, setPlayers] = useState<Player[]>([
-    {
-      id: "1",
-      name: "ShadowHunter",
-      points: 15420,
-      level: 42,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "2",
-      name: "MegaLion",
-      points: 12890,
-      level: 35,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "3",
-      name: "DarkSniper",
-      points: 11200,
-      level: 29,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "4",
-      name: "SuricatoX",
-      points: 8750,
-      level: 21,
-      photo: "/default-avatar.png",
-    },
-    {
-      id: "5",
-      name: "TikWarrior",
-      points: 6210,
-      level: 17,
-      photo: "/default-avatar.png",
-    },
+    { id: "1", name: "ShadowHunter", points: 15420, level: 42, photo: "/default-avatar.png" },
+    { id: "2", name: "MegaLion", points: 12890, level: 35, photo: "/default-avatar.png" },
+    { id: "3", name: "DarkSniper", points: 11200, level: 29, photo: "/default-avatar.png" },
+    { id: "4", name: "SuricatoX", points: 8750, level: 21, photo: "/default-avatar.png" },
+    { id: "5", name: "TikWarrior", points: 6210, level: 17, photo: "/default-avatar.png" },
   ]);
 
   useEffect(() => {
@@ -66,9 +36,7 @@ export default function RankOverlay() {
     });
 
     socket.on("arena:update", (data: any) => {
-      if (data?.players) {
-        setPlayers(data.players);
-      }
+      if (data?.players) setPlayers(data.players);
     });
 
     return () => {
@@ -82,57 +50,76 @@ export default function RankOverlay() {
     .slice(0, topLimit);
 
   return (
-    <main style={styles.page}>
-      <div style={styles.container}>
-        <div style={styles.header}>
-          <div style={styles.crown}>👑</div>
-          <h1 style={styles.title}>RANK DA ARENA</h1>
-          <p style={styles.subtitle}>TOP {topLimit} GUERREIROS</p>
-        </div>
+    <>
+      <style jsx global>{`
+        html,
+        body,
+        #__next {
+          margin: 0 !important;
+          padding: 0 !important;
+          background: transparent !important;
+          overflow: hidden !important;
+        }
 
-        <div style={styles.list}>
-          {topPlayers.map((player, index) => (
-            <div
-              key={player.id}
-              style={{
-                ...styles.playerCard,
-                ...(index === 0 ? styles.first : {}),
-                ...(index === 1 ? styles.second : {}),
-                ...(index === 2 ? styles.third : {}),
-              }}
-            >
+        body::before,
+        body::after {
+          display: none !important;
+          background: transparent !important;
+        }
+      `}</style>
+
+      <main style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.header}>
+            <div style={styles.crown}>👑</div>
+            <h1 style={styles.title}>RANK DA ARENA</h1>
+            <p style={styles.subtitle}>TOP {topLimit} GUERREIROS</p>
+          </div>
+
+          <div style={styles.list}>
+            {topPlayers.map((player, index) => (
               <div
+                key={player.id}
                 style={{
-                  ...styles.position,
-                  ...(index === 0 ? styles.gold : {}),
-                  ...(index === 1 ? styles.silver : {}),
-                  ...(index === 2 ? styles.bronze : {}),
+                  ...styles.playerCard,
+                  ...(index === 0 ? styles.first : {}),
+                  ...(index === 1 ? styles.second : {}),
+                  ...(index === 2 ? styles.third : {}),
                 }}
               >
-                {index + 1}
-              </div>
-
-              <img
-                src={player.photo || "/default-avatar.png"}
-                alt={player.name}
-                style={styles.avatar}
-              />
-
-              <div style={styles.info}>
-                <div style={styles.name}>{player.name}</div>
-                <div style={styles.points}>
-                  🏆 {(player.points || 0).toLocaleString()} pts
+                <div
+                  style={{
+                    ...styles.position,
+                    ...(index === 0 ? styles.gold : {}),
+                    ...(index === 1 ? styles.silver : {}),
+                    ...(index === 2 ? styles.bronze : {}),
+                  }}
+                >
+                  {index + 1}
                 </div>
+
+                <img
+                  src={player.photo || "/default-avatar.png"}
+                  alt={player.name}
+                  style={styles.avatar}
+                />
+
+                <div style={styles.info}>
+                  <div style={styles.name}>{player.name}</div>
+                  <div style={styles.points}>
+                    🏆 {(player.points || 0).toLocaleString()} pts
+                  </div>
+                </div>
+
+                <div style={styles.level}>LV {player.level || 1}</div>
               </div>
+            ))}
+          </div>
 
-              <div style={styles.level}>LV {player.level || 1}</div>
-            </div>
-          ))}
+          <div style={styles.footer}>ATAQUE • EVOLUA • DOMINE</div>
         </div>
-
-        <div style={styles.footer}>ATAQUE • EVOLUA • DOMINE</div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }
 
